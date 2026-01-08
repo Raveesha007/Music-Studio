@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Studio Pro | Master Your Instrument</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="audioAnalysisStyles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="tab_icon.png">
+</head>
+<body>
+
+<div class="container">
+    <header class="header">
+        <h1>🎵 Music Studio Pro</h1>
+    </header>
+
+    <div class="step-container active" id="step1">
+        <div class="step-header">
+            <h2 class="step-title">I want to master...</h2>
+        </div>
+        <div class="instrument-grid">
+            <div class="instrument-card" onclick="selectInstrument('acoustic_guitar', this)">
+                <div class="instrument-name">Guitar</div>
+                <p class="instrument-description">Play the virtual guitar and visualize notes, chords, and scales.</p>
+            </div>
+            <div class="instrument-card" onclick="selectInstrument('piano', this)">
+                <div class="instrument-name">Piano</div>
+                <p class="instrument-description">Play the virtual piano and visualize notes, chords, and scales.</p>
+            </div>
+        </div>
+        <button class="btn btn-analyze" id="analyzeNotesBtn" onclick="openAnalyzerModal()" title="Record and analyze your notes">
+            🎙️ Analyze Notes
+        </button>
+    </div>
+
+    <div class="step-container" id="step2">
+    <div class="step-header">
+        <h2 class="step-title" id="experienceTitle">How much music do you know?</h2>
+    </div>
+    
+    <div class="experience-list" id="experienceList">
+        <div class="exp-item" onclick="selectExperience('Some', this)">
+            <div class="exp-bar-container">
+                <div class="exp-bar" style="height: 40%; background: #1cb0f6;"></div>
+                <div class="exp-bar" style="height: 60%; opacity: 0.3;"></div>
+                <div class="exp-bar" style="height: 80%; opacity: 0.3;"></div>
+            </div>
+            <div class="exp-text">I'm new to <span class="selected-instr-name">music</span></div>
+        </div>
+
+        <div class="exp-item" onclick="selectExperience('Basic', this)">
+            <div class="exp-bar-container">
+                <div class="exp-bar" style="height: 40%; background: #1cb0f6;"></div>
+                <div class="exp-bar" style="height: 60%; background: #1cb0f6;"></div>
+                <div class="exp-bar" style="height: 80%; opacity: 0.3;"></div>
+            </div>
+            <div class="exp-text">I learned some music, but it was long time ago</div>
+        </div>
+
+        <div class="exp-item" onclick="selectExperience('Advanced', this)">
+            <div class="exp-bar-container">
+                <div class="exp-bar" style="height: 40%; background: #1cb0f6;"></div>
+                <div class="exp-bar" style="height: 60%; background: #1cb0f6;"></div>
+                <div class="exp-bar" style="height: 80%; background: #1cb0f6;"></div>
+            </div>
+            <div class="exp-text">I have some music skills I want to keep sharp</div>
+        </div>
+    </div>
+
+    <div id="pianoPreviewSection" class="piano-preview-container" style="display: none;">
+        <div class="piano-preview-keyboard" id="pianoPreviewKeyboard">
+            <!-- Piano keys will be generated dynamically -->
+        </div>
+        <div class="piano-description">
+            <h3>Play piano online</h3>
+            <p>Use your computer keyboard or click the piano keys to play the piano. The keyboard's top row of letters corresponds to the white keys, and the row of numbers corresponds to the black keys. You can play multiple notes simultaneously.</p>
+        </div>
+    </div>
+</div>
+   <div class="step-container" id="step3">
+    <div class="step-header">
+        <h2 class="step-title">Here's a closer look at the Music course!</h2>
+    </div>
+
+    <div class="course-description-card">
+        <ul class="course-features">
+            <li>
+                <span class="feature-icon" id="dynamicInstrumentEmoji">🎹</span>
+                <span class="feature-text">Build music skills</span>
+            </li>
+            <li>
+                <span class="feature-icon">🎵</span>
+                <span class="feature-text">Play songs</span>
+            </li>
+            <li>
+                <span class="feature-icon">🥳</span>
+                <span class="feature-text">Have fun with music</span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+    <div class="step-container" id="step4">
+    <div class="step-header">
+        <h2 class="step-title">Basis</h2>
+    </div>
+    <div class="instrument-grid">
+        <div class="instrument-card" onclick="selectBasis('Notes', this)">
+         
+            <div class="instrument-name">Notes</div>
+        </div>
+        <div class="instrument-card" onclick="selectBasis('Rhythms', this)">
+          
+            <div class="instrument-name">Rhythms</div>
+        </div>
+    </div>
+    <div class="practice-controls">
+        <button class="btn btn-back" onclick="changeStep(-1)">BACK</button>
+        <button class="btn btn-next" id="nextBasisBtn" onclick="changeStep(1)" style="display: none;">NEXT</button>
+    </div>
+</div>
+</div>
+
+    <div class="step-container" id="step5">
+        <div class="step-header">
+            <h2 class="step-title">Select a Lesson</h2>
+        </div>
+        <div class="instrument-grid" id="trackGallery">
+            <!-- Tiles will be dynamically rendered here -->
+        </div>
+        <div class="practice-controls">
+            <button class="btn btn-back" id="backStep5Btn" onclick="handleStep5Back()">BACK</button>
+            <button class="btn btn-next" id="practiceBtn" onclick="startPracticeFromSelection()" style="display: none;">PRACTICE</button>
+        </div>
+    </div>
+
+    <div id="step6" class="step-container">
+        <h2 id="currentTrackName" class="step-title">Masterpiece Track 1</h2>
+        
+        <div class="practice-area">
+            <div id="pianoContainer" style="display: none;" class="piano-section">
+                <p id="pianoInstructions" class="piano-instructions">Click the keys below or use your keyboard to find C, D, and E</p>
+                <div id="pianoFeedback" class="piano-feedback"></div>
+                <div class="piano-keyboard" id="pianoKeyboard">
+                    <!-- Keys will be generated dynamically -->
+                </div>
+                <div id="pianoStats" class="piano-stats">
+                    <div class="stat-box points-box">
+                        <div class="stat-header">Points</div>
+                        <div class="stat-content">
+                            <span class="stat-icon">♪</span>
+                            <span class="stat-value" id="scoreValue">50</span>
+                        </div>
+                    </div>
+                    <div class="stat-box accuracy-box">
+                        <div class="stat-header">Accuracy</div>
+                        <div class="stat-content">
+                            <span class="stat-icon">⊙</span>
+                            <span class="stat-value" id="accuracyValue">100 %</span>
+                        </div>
+                        <div class="stat-star">⭐</div>
+                    </div>
+                </div>
+            </div>
+
+            <canvas id="visualizerCanvas" style="display: none;"></canvas>
+
+            <div class="sheet-music-container" id="sheetContainer">
+                <img id="practiceSheet" src="" alt="Sheet Music">
+            </div>
+
+            <div class="audio-container" style="display: none;">
+                <audio id="practiceAudio"></audio>
+            </div>
+
+            <div class="practice-controls">
+                <button class="btn btn-next" id="playBtn" onclick="playAudio()" style="display: none;">
+                    ▶ PRACTICE
+                </button>
+                
+                <button class="btn btn-back" id="backBtn" onclick="changeStep(-1)" style="display: none;">BACK</button>
+                <button class="btn btn-next" id="continueBtn" onclick="continueToPractice()" style="display: none;">CONTINUE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="step-container" id="step7">
+        <div class="step-header">
+            <h2 class="step-title">Excellent Work!</h2>
+            <p class="step-subtitle">You completed your practice session.</p>
+        </div>
+        <div class="completion-content">
+            <div class="final-status-icon">🌟</div>
+            <button class="btn btn-next" onclick="resetApp()">PRACTICE AGAIN</button>
+        </div>
+    </div>
+
+    <div class="character-container" id="characterContainer">
+        <div class="speech-bubble" id="speechBubble">Choose an instrument to start!</div>
+        <div class="character-sprite" id="characterSprite">🐯</div>
+    </div>
+
+    <div class="navigation">
+        <button class="btn btn-back" id="btnBack" onclick="changeStep(-1)" disabled>Back</button>
+        <button class="btn btn-next" id="btnNext" onclick="changeStep(1)" disabled>Continue</button>
+    </div>
+</div>
+
+<button class="theme-toggle" onclick="toggleDarkMode(event)" title="Toggle Dark Mode">
+    <span id="theme-icon">🌙</span>
+</button>
+<script src="audioAnalyzer.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

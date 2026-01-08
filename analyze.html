@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Analyze Notes</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="audioAnalysisStyles.css">
+  <style>
+    .analyze-container {
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 32px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 6px 32px rgba(0,0,0,0.10);
+      text-align: center;
+      position: relative;
+      font-family: Arial, sans-serif;
+    }
+    .visualizer-graph {
+      width: 100%;
+      height: 180px;
+      background: #222;
+      border-radius: 10px;
+      margin: 24px 0;
+      display: block;
+    }
+    .analyze-btn {
+      background: linear-gradient(90deg, #4f8cff, #38e6ff);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 36px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      margin: 16px 0;
+      transition: background 0.2s;
+      font-family: Arial, sans-serif;
+      font-weight: 600;
+    }
+    .analyze-btn:active {
+      background: #38e6ff;
+    }
+    .results-list {
+      margin: 24px 0 0 0;
+      padding: 0;
+      list-style: none;
+      font-size: 1.1rem;
+      font-family: Arial, sans-serif;
+    }
+    .results-list li {
+      margin: 8px 0;
+    }
+    .back-link {
+      position: absolute;
+      left: 32px;
+      top: 32px;
+      font-size: 1.1rem;
+      color: #4f8cff;
+      text-decoration: none;
+      font-weight: 600;
+      font-family: Arial, sans-serif;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <a href="Instrument.html" class="back-link">← Back to Home</a>
+  <div class="analyze-container">
+    <h1>🎵 Analyze Your Notes</h1>
+    <p style="color: #666; margin-bottom: 20px;">Record yourself singing or playing notes to see what was detected</p>
+    <canvas id="analyzeVisualizer" class="visualizer-graph"></canvas>
+    <button id="analyzeRecordBtn" class="analyze-btn">🎤 Start Recording</button>
+    <div id="analyzeTimer" style="margin:10px 0; color:#4f8cff; font-weight:600; display:none; font-size:1.2rem;">00:00</div>
+    
+    <div id="resultsSection" style="display:none; margin-top:32px;">
+      <h3 style="color: #222; margin-bottom: 16px;">Detected Notes</h3>
+      <div id="notesBar" style="display:flex; gap:16px; justify-content:center; align-items:flex-end; height:280px; padding:20px 10px; background:#f5f7fa; border-radius:12px; margin-bottom:24px; overflow-x: auto;">
+        <!-- Notes will be displayed as bars here -->
+      </div>
+      <ul id="analyzeResults" class="results-list"></ul>
+      <button id="startChallengeBtn" class="analyze-btn" style="margin-top:24px;">🎼 Start Note Challenge</button>
+    </div>
+
+    <div id="challengeSection" style="display:none; margin-top:32px; padding:24px; background:#f5f7fa; border-radius:12px;">
+      <h3 style="color: #222; margin-bottom: 24px;">📋 Play These Notes</h3>
+      
+      <div id="sheetDisplay" style="display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap; margin-bottom:32px; padding:20px; background:#fff; border-radius:8px; border:2px solid #4f8cff;">
+        <!-- Target notes will be displayed here -->
+      </div>
+
+      <div id="challengeStatus" style="text-align:center; margin-bottom:20px;">
+        <p id="currentNoteText" style="font-size:1.3rem; color:#4f8cff; font-weight:600; margin:0;">Waiting for you to play...</p>
+        <p id="noteCountText" style="font-size:1rem; color:#666; margin:8px 0 0 0;">Note: <span id="currentNoteNum">0</span> / <span id="totalNoteNum">7</span></p>
+      </div>
+
+      <canvas id="challengeVisualizer" class="visualizer-graph" style="margin:24px 0;"></canvas>
+
+      <div id="progressDisplay" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:20px;">
+        <!-- Progress indicators will be shown here -->
+      </div>
+
+      <button id="startPlayingBtn" class="analyze-btn" style="background: linear-gradient(90deg, #22c55e, #16a34a); margin-bottom:12px;">🎤 Start Playing</button>
+      <button id="stopPlayingBtn" class="analyze-btn" style="background: #ff6b6b; display:none; margin-bottom:12px;">⏹ Stop</button>
+      <button id="resetChallengeBtn" class="analyze-btn" style="background: #6b7280;">🔄 Reset Challenge</button>
+    </div>
+  </div>
+  <script src="audioAnalyzer.js"></script>
+  <script>
+    // All variables
+    let recording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioContext = null;
+    let analyser = null;
+    let animationId = null;
+    let startTime = null;
+    let timerInterval = null;
+
+    // Challenge variables
+    let targetNotes = [];
+    let currentNoteIndex = 0;
+    let playedNotes = [];
+    let isPlayingChallenge = false;
+    let challengeMediaRecorder = null;
+    let challengeAudioChunks = [];
+    let challengeAnalyser = null;
+    let challengeAnimationId = null;
+
+    // DOM elements - will be set on load
+    let recordBtn = null;
+    let canvas = null;
+    let ctx = null;
+    let timer = null;
+    let resultsList = null;
+    let resultsSection = null;
+    let notesBar = null;
+    let startChallengeBtn = null;
+    let challengeSection = null;
+    let sheetDisplay = null;
+    let challengeVisualizer = null;
+    let challengeCtx = null;
+    let progressDisplay = null;
+    let currentNoteText = null;
+    let currentNoteNum = null;
+    let totalNoteNum = null;
+    let startPlayingBtn = null;
+    let stopPlayingBtn = null;
+    let resetChallengeBtn = null;
+
+    // Available notes for random selection
+    const AVAILABLE_NOTES = ['C_4', 'D_4', 'E_4', 'F_4', 'G_4', 'A_4', 'B_4', 'C_5', 'D_5', 'E_5', 'F_5', 'G_5'];
+
+    // Initialize all DOM elements
+    function initDOM() {
+      recordBtn = document.getElementById('analyzeRecordBtn');
+      canvas = document.getElementById('analyzeVisualizer');
+      timer = document.getElementById('analyzeTimer');
+      resultsList = document.getElementById('analyzeResults');
+      resultsSection = document.getElementById('resultsSection');
+      notesBar = document.getElementById('notesBar');
+      startChallengeBtn = document.getElementById('startChallengeBtn');
+      challengeSection = document.getElementById('challengeSection');
+      sheetDisplay = document.getElementById('sheetDisplay');
+      challengeVisualizer = document.getElementById('challengeVisualizer');
+      progressDisplay = document.getElementById('progressDisplay');
+      currentNoteText = document.getElementById('currentNoteText');
+      currentNoteNum = document.getElementById('currentNoteNum');
+      totalNoteNum = document.getElementById('totalNoteNum');
+      startPlayingBtn = document.getElementById('startPlayingBtn');
+      stopPlayingBtn = document.getElementById('stopPlayingBtn');
+      resetChallengeBtn = document.getElementById('resetChallengeBtn');
+      
+      if (canvas) {
+        ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
+
+      if (challengeVisualizer) {
+        challengeCtx = challengeVisualizer.getContext('2d');
+        challengeVisualizer.width = challengeVisualizer.offsetWidth;
+        challengeVisualizer.height = challengeVisualizer.offsetHeight;
+      }
+
+      // Add click listeners to buttons
+      if (recordBtn) {
+        recordBtn.addEventListener('click', handleRecordButton);
+      }
+      if (startChallengeBtn) {
+        startChallengeBtn.addEventListener('click', startNoteChallenge);
+      }
+      if (startPlayingBtn) {
+        startPlayingBtn.addEventListener('click', handlePlayingButton);
+      }
+      if (stopPlayingBtn) {
+        stopPlayingBtn.addEventListener('click', handlePlayingButton);
+      }
+      if (resetChallengeBtn) {
+        resetChallengeBtn.addEventListener('click', resetChallenge);
+      }
+
+      console.log('DOM initialized');
+    }
+
+    // Handle record button click
+    async function handleRecordButton() {
+      console.log('Button clicked, recording:', recording);
+      
+      if (!recording) {
+        // Start recording
+        try {
+          console.log('Requesting microphone access...');
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log('Microphone access granted');
+          
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const micSource = audioContext.createMediaStreamSource(stream);
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256;
+          micSource.connect(analyser);
+          
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+          mediaRecorder.ondataavailable = (e) => {
+            console.log('Data available:', e.data);
+            audioChunks.push(e.data);
+          };
+          mediaRecorder.onstop = onRecordingStop;
+          
+          mediaRecorder.start();
+          console.log('Recording started');
+          
+          recording = true;
+          recordBtn.textContent = '⏹ Stop Recording';
+          recordBtn.style.background = '#ff6b6b';
+          timer.style.display = 'block';
+          resultsSection.style.display = 'none';
+          startTime = Date.now();
+          timerInterval = setInterval(updateTimer, 200);
+          drawVisualizer();
+        } catch (err) {
+          console.error('Error accessing microphone:', err);
+          alert('Microphone access required: ' + err.message);
+        }
+      } else {
+        // Stop recording
+        console.log('Stopping recording...');
+        if (mediaRecorder) {
+          mediaRecorder.stop();
+        }
+        recording = false;
+        recordBtn.textContent = '🎤 Start Recording';
+        recordBtn.style.background = 'linear-gradient(90deg, #4f8cff, #38e6ff)';
+        timer.style.display = 'none';
+        clearInterval(timerInterval);
+        stopVisualizer();
+        console.log('Recording stopped');
+      }
+    }
+
+    function updateTimer() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const min = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const sec = String(elapsed % 60).padStart(2, '0');
+      timer.textContent = `${min}:${sec}`;
+    }
+
+    // Draw live frequency visualizer
+    function drawVisualizer() {
+      if (!analyser || !canvas || !ctx) {
+        console.warn('Missing visualizer requirements');
+        return;
+      }
+      
+      console.log('Starting visualizer');
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      function draw() {
+        animationId = requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, 'rgba(79, 140, 255, 0.1)');
+        gradient.addColorStop(1, 'rgba(56, 230, 255, 0.1)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw bars with smooth animation
+        const barWidth = (canvas.width / bufferLength) * 2.5;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = (dataArray[i] / 255) * canvas.height;
+          const hue = (i / bufferLength) * 360;
+          ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+          ctx.shadowColor = `hsla(${hue}, 100%, 60%, 0.5)`;
+          ctx.shadowBlur = 4;
+          ctx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
+          x += barWidth;
+        }
+      }
+      draw();
+    }
+
+    function stopVisualizer() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      
+      if (canvas && ctx) {
+        // Draw ready state
+        ctx.fillStyle = 'rgba(79, 140, 255, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#4f8cff';
+        ctx.font = '16px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Ready to record...', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    async function onRecordingStop() {
+      try {
+        console.log('Recording stopped, processing audio...');
+        console.log('Audio chunks:', audioChunks.length);
+        
+        const blob = new Blob(audioChunks, { type: 'audio/wav' });
+        console.log('Blob created:', blob.size);
+        
+        const arrayBuffer = await blob.arrayBuffer();
+        console.log('ArrayBuffer created:', arrayBuffer.byteLength);
+        
+        const audioBuffer = await (new (window.AudioContext || window.webkitAudioContext)()).decodeAudioData(arrayBuffer);
+        console.log('Audio decoded:', audioBuffer.length);
+        
+        // Analyze using the audioAnalyzer from audioAnalyzer.js
+        if (typeof audioAnalyzer === 'undefined') {
+          console.error('audioAnalyzer is undefined');
+          alert('Audio analyzer not initialized. Please refresh the page.');
+          return;
+        }
+        
+        console.log('Starting analysis...');
+        const detectedNotes = await audioAnalyzer.analyzeAudioBuffer(audioBuffer);
+        console.log('Detected notes:', detectedNotes);
+        
+        const uniqueNotes = audioAnalyzer.getDetectedNotesList();
+        console.log('Unique notes:', uniqueNotes);
+        
+        resultsList.innerHTML = '';
+        notesBar.innerHTML = '';
+        
+        if (uniqueNotes.length === 0) {
+          resultsList.innerHTML = '<li style="color:#ff6b6b; font-size:1.1rem;">❌ No notes detected. Please try again with a clearer voice.</li>';
+          resultsSection.style.display = 'block';
+        } else {
+          // Display notes as list
+          uniqueNotes.forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span style="display:inline-block; width:100px;"><b>${item.note}</b></span> <span style="color:#4f8cff; font-weight:600;">${(item.confidence*100).toFixed(0)}%</span>`;
+            resultsList.appendChild(li);
+          });
+          
+          // Draw beautiful bar graph
+          drawNoteGraph(uniqueNotes);
+          resultsSection.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error analyzing audio:', error);
+        resultsList.innerHTML = '<li style="color:#ff6b6b;">Error analyzing audio: ' + error.message + '</li>';
+        resultsSection.style.display = 'block';
+      }
+    }
+
+    // Draw a beautiful bar graph of detected notes
+    function drawNoteGraph(notes) {
+      if (!notes || notes.length === 0) return;
+      
+      // Clear previous bars
+      notesBar.innerHTML = '';
+      
+      // Find max confidence for scaling
+      const maxConfidence = Math.max(...notes.map(n => n.confidence));
+      const colors = ['#4f8cff', '#38e6ff', '#1cb0f6', '#0092d2', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899'];
+      
+      notes.forEach((item, index) => {
+        const barContainer = document.createElement('div');
+        barContainer.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 8px;
+          flex: 0 1 auto;
+          min-width: 45px;
+          height: 100%;
+        `;
+        
+        const barHeight = (item.confidence / maxConfidence) * 200; // Max height 200px
+        const color = colors[index % colors.length];
+        
+        const bar = document.createElement('div');
+        bar.style.cssText = `
+          width: 40px;
+          height: ${barHeight}px;
+          background: linear-gradient(180deg, ${color}, ${adjustColor(color, -20)});
+          border-radius: 8px 8px 0 0;
+          box-shadow: 0 4px 12px ${adjustColor(color, -40)};
+          transition: all 0.3s ease;
+          cursor: pointer;
+        `;
+        
+        bar.onmouseover = function() {
+          bar.style.transform = 'scaleY(1.05)';
+          bar.style.boxShadow = '0 8px 16px ' + adjustColor(color, -40);
+        };
+        
+        bar.onmouseout = function() {
+          bar.style.transform = 'scaleY(1)';
+          bar.style.boxShadow = '0 4px 12px ' + adjustColor(color, -40);
+        };
+        
+        const label = document.createElement('div');
+        label.style.cssText = `
+          font-weight: 600;
+          color: #222;
+          font-size: 12px;
+          text-align: center;
+          word-break: break-word;
+          width: 45px;
+          line-height: 1.3;
+        `;
+        label.textContent = item.note;
+        
+        const percent = document.createElement('div');
+        percent.style.cssText = `
+          font-size: 11px;
+          color: #666;
+          font-weight: 500;
+        `;
+        percent.textContent = (item.confidence * 100).toFixed(0) + '%';
+        
+        barContainer.appendChild(bar);
+        barContainer.appendChild(label);
+        barContainer.appendChild(percent);
+        notesBar.appendChild(barContainer);
+      });
+    }
+    
+    // Helper function to adjust color brightness
+    function adjustColor(color, percent) {
+      const num = parseInt(color.replace(/^#/, ''), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+      const G = Math.max(0, Math.min(255, (num >> 8 & 0x00FF) + amt));
+      const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
+      return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+    }
+
+    // Generate 7 random notes
+    function generateRandomNotes() {
+      targetNotes = [];
+      for (let i = 0; i < 7; i++) {
+        const randomNote = AVAILABLE_NOTES[Math.floor(Math.random() * AVAILABLE_NOTES.length)];
+        targetNotes.push(randomNote);
+      }
+      console.log('Generated target notes:', targetNotes);
+      return targetNotes;
+    }
+
+    // Display target notes as a sheet
+    function displaySheet() {
+      sheetDisplay.innerHTML = '';
+      const colors = ['#4f8cff', '#38e6ff', '#1cb0f6', '#0092d2', '#6366f1', '#8b5cf6', '#d946ef'];
+      
+      targetNotes.forEach((note, index) => {
+        const noteBox = document.createElement('div');
+        noteBox.style.cssText = `
+          width: 50px;
+          height: 50px;
+          background: ${colors[index % colors.length]};
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 18px;
+          color: white;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          transition: all 0.3s ease;
+        `;
+        noteBox.textContent = note.replace('_', '');
+        sheetDisplay.appendChild(noteBox);
+      });
+    }
+
+    // Update progress display with checkmarks and X's
+    function updateProgress() {
+      progressDisplay.innerHTML = '';
+      const colors = ['#4f8cff', '#38e6ff', '#1cb0f6', '#0092d2', '#6366f1', '#8b5cf6', '#d946ef'];
+      
+      targetNotes.forEach((note, index) => {
+        const indicator = document.createElement('div');
+        indicator.style.cssText = `
+          width: 45px;
+          height: 45px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 24px;
+          background: ${colors[index % colors.length]};
+          color: white;
+          transition: all 0.3s ease;
+        `;
+        
+        if (index < playedNotes.length) {
+          if (playedNotes[index] === note) {
+            indicator.textContent = '✓';
+            indicator.style.background = '#22c55e';
+            indicator.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.4)';
+          } else {
+            indicator.textContent = '✗';
+            indicator.style.background = '#ef4444';
+            indicator.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+          }
+        } else {
+          indicator.textContent = '○';
+          indicator.style.opacity = '0.5';
+        }
+        
+        progressDisplay.appendChild(indicator);
+      });
+    }
+
+    // Start the note challenge
+    function startNoteChallenge() {
+      generateRandomNotes();
+      currentNoteIndex = 0;
+      playedNotes = [];
+      displaySheet();
+      updateProgress();
+      totalNoteNum.textContent = '7';
+      challengeSection.style.display = 'block';
+      resultsSection.style.display = 'none';
+      startPlayingBtn.style.display = 'block';
+      stopPlayingBtn.style.display = 'none';
+      currentNoteText.textContent = `Play: ${targetNotes[0].replace('_', '')}`;
+      currentNoteNum.textContent = '0';
+    }
+
+    // Handle playing button
+    async function handlePlayingButton() {
+      if (!isPlayingChallenge) {
+        // Start playing
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const micSource = audioContext.createMediaStreamSource(stream);
+          challengeAnalyser = audioContext.createAnalyser();
+          challengeAnalyser.fftSize = 256;
+          micSource.connect(challengeAnalyser);
+          
+          challengeMediaRecorder = new MediaRecorder(stream);
+          challengeAudioChunks = [];
+          challengeMediaRecorder.ondataavailable = (e) => {
+            challengeAudioChunks.push(e.data);
+          };
+          challengeMediaRecorder.onstop = onChallengeRecordingStop;
+          
+          challengeMediaRecorder.start();
+          isPlayingChallenge = true;
+          startPlayingBtn.style.display = 'none';
+          stopPlayingBtn.style.display = 'block';
+          currentNoteText.textContent = `🎤 Listening for: ${targetNotes[currentNoteIndex].replace('_', '')}`;
+          drawChallengeVisualizer();
+        } catch (err) {
+          console.error('Error accessing microphone:', err);
+          alert('Microphone access required: ' + err.message);
+        }
+      } else {
+        // Stop playing
+        if (challengeMediaRecorder) {
+          challengeMediaRecorder.stop();
+        }
+        isPlayingChallenge = false;
+        stopPlayingBtn.style.display = 'none';
+        startPlayingBtn.style.display = 'block';
+        stopChallengeVisualizer();
+      }
+    }
+
+    // Draw live visualizer for challenge
+    function drawChallengeVisualizer() {
+      if (!challengeAnalyser || !challengeVisualizer || !challengeCtx) return;
+      
+      const bufferLength = challengeAnalyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      function draw() {
+        challengeAnimationId = requestAnimationFrame(draw);
+        challengeAnalyser.getByteFrequencyData(dataArray);
+        challengeCtx.clearRect(0, 0, challengeVisualizer.width, challengeVisualizer.height);
+        
+        const gradient = challengeCtx.createLinearGradient(0, 0, 0, challengeVisualizer.height);
+        gradient.addColorStop(0, 'rgba(34, 197, 94, 0.1)');
+        gradient.addColorStop(1, 'rgba(34, 197, 94, 0.05)');
+        challengeCtx.fillStyle = gradient;
+        challengeCtx.fillRect(0, 0, challengeVisualizer.width, challengeVisualizer.height);
+        
+        const barWidth = (challengeVisualizer.width / bufferLength) * 2.5;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = (dataArray[i] / 255) * challengeVisualizer.height;
+          challengeCtx.fillStyle = '#22c55e';
+          challengeCtx.shadowColor = 'rgba(34, 197, 94, 0.5)';
+          challengeCtx.shadowBlur = 4;
+          challengeCtx.fillRect(x, challengeVisualizer.height - barHeight, barWidth - 1, barHeight);
+          x += barWidth;
+        }
+      }
+      draw();
+    }
+
+    function stopChallengeVisualizer() {
+      if (challengeAnimationId) {
+        cancelAnimationFrame(challengeAnimationId);
+        challengeAnimationId = null;
+      }
+      
+      if (challengeVisualizer && challengeCtx) {
+        challengeCtx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+        challengeCtx.fillRect(0, 0, challengeVisualizer.width, challengeVisualizer.height);
+      }
+    }
+
+    // Handle challenge recording stop
+    async function onChallengeRecordingStop() {
+      try {
+        const blob = new Blob(challengeAudioChunks, { type: 'audio/wav' });
+        const arrayBuffer = await blob.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        // Analyze the recorded audio
+        if (typeof audioAnalyzer === 'undefined') {
+          alert('Audio analyzer not initialized');
+          return;
+        }
+        
+        const detectedNotes = await audioAnalyzer.analyzeAudioBuffer(audioBuffer);
+        const uniqueNotes = audioAnalyzer.getDetectedNotesList();
+        
+        console.log('Detected notes in challenge:', uniqueNotes);
+        
+        if (uniqueNotes.length === 0) {
+          currentNoteText.textContent = '❌ No note detected. Try again!';
+          startPlayingBtn.textContent = '🎤 Try Again';
+          startPlayingBtn.style.display = 'block';
+        } else {
+          // Get the note with highest confidence
+          const detectedNote = uniqueNotes[0].note;
+          const expectedNote = targetNotes[currentNoteIndex];
+          
+          console.log('Expected:', expectedNote, 'Detected:', detectedNote);
+          
+          if (detectedNote === expectedNote) {
+            // Correct!
+            playedNotes.push(detectedNote);
+            currentNoteIndex++;
+            updateProgress();
+            
+            if (currentNoteIndex < 7) {
+              currentNoteText.textContent = `✓ Correct! Now play: ${targetNotes[currentNoteIndex].replace('_', '')}`;
+              currentNoteNum.textContent = currentNoteIndex.toString();
+              startPlayingBtn.textContent = '🎤 Next Note';
+              startPlayingBtn.style.display = 'block';
+            } else {
+              // Challenge completed!
+              currentNoteText.textContent = '🎉 Perfect! You got all 7 notes correct!';
+              currentNoteNum.textContent = '7';
+              startPlayingBtn.style.display = 'none';
+              stopPlayingBtn.style.display = 'none';
+            }
+          } else {
+            // Wrong note
+            currentNoteText.textContent = `❌ Wrong! Expected: ${expectedNote.replace('_', '')}, Got: ${detectedNote.replace('_', '')}`;
+            startPlayingBtn.textContent = '🎤 Try Again';
+            startPlayingBtn.style.display = 'block';
+          }
+        }
+      } catch (error) {
+        console.error('Error analyzing challenge audio:', error);
+        currentNoteText.textContent = 'Error analyzing audio. Try again!';
+        startPlayingBtn.style.display = 'block';
+      }
+    }
+
+    // Reset challenge
+    function resetChallenge() {
+      currentNoteIndex = 0;
+      playedNotes = [];
+      isPlayingChallenge = false;
+      startPlayingBtn.textContent = '🎤 Start Playing';
+      startPlayingBtn.style.display = 'block';
+      stopPlayingBtn.style.display = 'none';
+      challengeSection.style.display = 'none';
+      resultsSection.style.display = 'block';
+      currentNoteText.textContent = 'Waiting for you to play...';
+      updateProgress();
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('DOMContentLoaded fired');
+      
+      try {
+        // Initialize all DOM elements
+        initDOM();
+        
+        // Show ready state on canvas
+        stopVisualizer();
+
+        // Initialize audio analyzer if available
+        if (typeof audioAnalyzer !== 'undefined') {
+          try {
+            await audioAnalyzer.loadTriads('./New folder/triads.csv');
+            console.log('Audio analyzer triads loaded');
+          } catch (e) {
+            console.warn('Could not load triads:', e);
+          }
+        } else {
+          console.warn('Audio analyzer not found');
+        }
+        
+        console.log('Initialization complete');
+      } catch (error) {
+        console.error('Initialization error:', error);
+      }
+    });
+  </script>
+  </script>
+</body>
+</html>
